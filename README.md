@@ -56,3 +56,12 @@ chmod +x ./deploy.sh
 ```
 可以一键部署
 
+
+## 数学
+
+使用 `mathjax`, 需要额外安装插件
+
+```sh
+npm un hexo-renderer-marked --save
+npm i hexo-renderer-kramed --save
+```
