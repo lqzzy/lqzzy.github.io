@@ -24,3 +24,9 @@ hexo serve
 npm install hexo-deployer-git --save
 hexo deploy
 ```
+
+## 主题
+
+```plaintext
+git clone https://github.com/theme-next/hexo-theme-next themes/next
+```
