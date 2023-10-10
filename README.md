@@ -1,3 +1,5 @@
+## 首次尝试
+
 首先使用如下命令创建项目：
 
 ```plaintext
@@ -28,5 +30,29 @@ hexo deploy
 ## 主题
 
 ```plaintext
-git clone https://github.com/theme-next/hexo-theme-next themes/next
+git clone [url] themes/[name]
 ```
+
+## 文章
+
+比如我们要新建一篇「HelloWorld」的文章，命令如下：
+
+```sh
+hexo new hello-world
+```
+
+在文件中categories属性后添加需要的分类，一篇文章可以有多个分类
+
+## 部署
+
+首先执行
+```sh
+chmod +x ./deploy.sh
+```
+
+然后执行
+```sh
+./deploy.sh
+```
+可以一键部署
+
