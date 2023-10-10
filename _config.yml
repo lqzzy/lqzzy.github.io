@@ -3,12 +3,12 @@
 ## Source: https://github.com/hexojs/hexo/
 
 # Site
-title: Hexo
-subtitle: ''
-description: ''
-keywords:
-author: John Doe
-language: en
+title: 'lqzzy'
+subtitle: 'AI 领域探索者'
+description: '希望有朝一日能够成为大佬'
+keywords: 'AI, 深度学习'
+author: Li Qi
+language: zh-CN
 timezone: ''
 
 # URL
@@ -97,7 +97,7 @@ ignore:
 # Extensions
 ## Plugins: https://hexo.io/plugins/
 ## Themes: https://hexo.io/themes/
-theme: landscape
+theme: next
 
 # Deployment
 ## Docs: https://hexo.io/docs/one-command-deployment
@@ -105,3 +105,12 @@ deploy:
   type: git
   repo: git@github.com:lqzzy/lqzzy.github.io.git
   branch: main
+
+# Search
+
+search:
+  path: search.xml
+  field: post
+  format: html
+  limit: 10000
+
