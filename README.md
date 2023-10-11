@@ -65,3 +65,9 @@ chmod +x ./deploy.sh
 npm un hexo-renderer-marked --save
 npm i hexo-renderer-kramed --save
 ```
+
+## 插件
+
+```sh
+npm install hexo-auto-category --save
+```
