@@ -111,3 +111,11 @@ deploy:
 auto_category:
   enable: true
   depth: 1
+
+math:
+  engine: 'mathjax'
+  mathjax:
+    enable: true
+    # Next v6.3.0 后的版本 tags 要设置成 ams
+    # Available values: none | ams | all
+    tags: ams
