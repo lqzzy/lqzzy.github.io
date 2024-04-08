@@ -14,7 +14,7 @@
 <meta property="og:description" content="BPTT BPTT: BackPropagation Through Time (通过时间反向传播)  通过时间反向传播 (BPTT) 是一种训练循环神经网络 (RNN) 的技术。基本上，它涉及到将循环神经网络展开成为一个深度神经网络，并按照这种展开的网络进行反向传播。 误差信号误差信号 $v(t)$ 的定义基于链式法则（chain rule）的概念，为了计算它，我们首先需要回顾神经网络的误差函数">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="1970-01-01T00:00:00.000Z">
-<meta property="article:modified_time" content="2024-04-07T14:14:10.829Z">
+<meta property="article:modified_time" content="2024-04-07T15:22:55.629Z">
 <meta property="article:author" content="Li Qi">
 <meta property="article:tag" content="AI, 深度学习">
 <meta name="twitter:card" content="summary">
@@ -184,14 +184,22 @@
 <p>我们想要找到损失函数 $E(t)$ 相对于净输入 $net_k(t)$ 的导数，因为这会告诉我们如何调整权重以减小误差。</p>
 <p>在时刻 t，<strong>输出单元</strong> k 的目标由 $d_k(t)$ 表示。使用均方误差，k 的误差信号为 $v(t)$，其定义为：</p>
 <p>$$v(t) &#x3D; \frac{\partial E(t)}{\partial net_{k}(t)}&#x3D;\frac{\partial E(t)}{\partial y^{k}(t)} \times \frac{\partial y^{k}(t)}{\partial net_{k}(t)}$$</p>
+<ul>
+<li>$net_{k}(t)$ 是 <strong>输出单元</strong> 的净输入</li>
+<li>$y^k(t)$ 是 <strong>输出单元</strong> 的实际输出。</li>
+</ul>
 <p>所以最终我们得到误差信号表达式：</p>
 <p>$$v_k(t) &#x3D; f’_k(net_k(t))(y^k(t)-d_k(t))$$</p>
 <h4 id="非输出单元的误差信号"><a href="#非输出单元的误差信号" class="headerlink" title="非输出单元的误差信号"></a>非输出单元的误差信号</h4><p>首先复习链式法则的多变量版本，也叫做<strong>多元链式法则（multivariate chain rule）</strong></p>
-<p>多 元链式法则可以这样描述：考虑一个函数 $y(u_1, u_2, u_3, …, u_n)$，其中每个$u_i$都是另一个变量 $x_i$的函数。即$u_i &#x3D; g_i(x_1, x_2, x_3, …, x_m)$，那么y关于的偏导数是：</p>
+<p>多元链式法则可以这样描述：考虑一个函数 $y(u_1, u_2, u_3, …, u_n)$，其中每个$u_i$都是另一个变量$x_i$的函数。即$u_i &#x3D; g_i(x_1, x_2, x_3, …, x_m)$，那么y关于的偏导数是：</p>
 <p>$$<br>\frac{\partial y}{\partial x_{j}}&#x3D;\sum_{i&#x3D;1}^{m} \frac{\partial y}{\partial u_{i}} \frac{\partial u_{i}}{\partial x_{j}}<br>$$</p>
 <p>在神经网络的背景下，对于一个非输出节点$j$，最终的 Loss 函数可以通过所有与 $j$ 相连的下一层（离输出层更近的那一层）中的节点$i$反向传播到$j$</p>
-<p>根据上面的链式公式，不难求出：</p>
-<p>$$v_{j}(t)&#x3D;f_{j}^{\prime}\left(net_{j}(t)\right) \sum_{i} w_{i j} v_{i}(t+1)$$</p>
+<p>$$<br>    v_{j} &#x3D; \frac{\partial E}{\partial net_{j}} &#x3D; \sum_{i} \frac{\partial E}{\partial net_{i}} \frac{\partial net_{i}}{\partial net_{j}}<br>$$</p>
+<p>其中</p>
+<p>$$<br>    \frac{\partial E}{\partial net_i{i}} &#x3D; v_i<br>$$</p>
+<p>$$<br>    \frac{\partial net_{i}}{\partial net_{j}} &#x3D; \frac{\partial net_{i}}{\partial out_{j}} \frac{\partial out_j}{\partial net_{j}}<br>$$</p>
+<p>根据上面公式, 不难推出：</p>
+<p>$$v_{j}&#x3D;f_{j}^{\prime}\left(net_{j}\right) \sum_{i} w_{i j} v_{i}$$</p>
 <p>这就是非输出单元误差信号的求法</p>
 <h3 id="梯度下降"><a href="#梯度下降" class="headerlink" title="梯度下降"></a>梯度下降</h3><p>我们有了每一个节点的误差信号，对于任意一个节点$i$与$j$之间的权重$w_{ij}$，我们需要的关键数据如下：</p>
 <p>$$\frac{\partial \text{loss}}{\partial w_{ij}(t)} &#x3D; y^i(t) \times v_j(t + 1)$$</p>
