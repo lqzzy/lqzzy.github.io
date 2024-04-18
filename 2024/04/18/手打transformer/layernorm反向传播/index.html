@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang=zh>
+<head>
+    <!-- so meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="HandheldFriendly" content="True">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <meta name="description" content="前向传播假设有一些向量的$m$维空间中，坐标点标准差会分别是$\mu(z)$和$\sigma(z)$，LayerNorm的参数是$w$和$b$，那么层归一化后的输出为： $$y &#x3D; w \cdot \frac{z-\mu}{\sqrt{\sigma^2 + \epsilon}} + b$$ 这里$\epsilon$是为了防止分母为$0$。去掉这一项： $$y &#x3D; w \cdot">
+<meta property="og:type" content="article">
+<meta property="og:title" content="layernorm反向传播">
+<meta property="og:url" content="http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/index.html">
+<meta property="og:site_name" content="lqzzy">
+<meta property="og:description" content="前向传播假设有一些向量的$m$维空间中，坐标点标准差会分别是$\mu(z)$和$\sigma(z)$，LayerNorm的参数是$w$和$b$，那么层归一化后的输出为： $$y &#x3D; w \cdot \frac{z-\mu}{\sqrt{\sigma^2 + \epsilon}} + b$$ 这里$\epsilon$是为了防止分母为$0$。去掉这一项： $$y &#x3D; w \cdot">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-04-17T16:00:00.000Z">
+<meta property="article:modified_time" content="2024-04-18T05:07:58.157Z">
+<meta property="article:author" content="Li Qi">
+<meta property="article:tag" content="AI, 深度学习">
+<meta name="twitter:card" content="summary">
+    
+    
+      
+        
+          <link rel="shortcut icon" href="/images/favicon.ico">
+        
+      
+      
+        
+          <link rel="icon" type="image/png" href="/images/favicon-192x192.png" sizes="192x192">
+        
+      
+      
+        
+          <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+        
+      
+    
+    <!-- title -->
+    <title>layernorm反向传播</title>
+    <!-- async scripts -->
+    <!-- Google Analytics -->
+
+
+    <!-- Umami Analytics -->
+
+
+    <!-- styles -->
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    <!-- persian styles -->
+    
+    <!-- rss -->
+    
+    
+	<!-- mathjax -->
+	
+		<script type="text/x-mathjax-config">
+		  MathJax.Hub.Config({
+			tex2jax: {
+			  skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+			  inlineMath: [['$','$']]
+			}
+		  });
+		</script>
+		<script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML' async></script>
+	
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+<!-- hexo injector head_end end --><meta name="generator" content="Hexo 7.1.1"></head>
+
+<body class="max-width mx-auto px3 ltr">
+    
+      <div id="header-post">
+  <a id="menu-icon" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" aria-label="顶部" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fa-solid fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+        <!--
+       --><li><a href="/">首页</a></li><!--
+     --><!--
+       --><li><a href="/about/">关于</a></li><!--
+     --><!--
+       --><li><a href="/archives/">归档</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="http://github.com/probberechts">项目</a></li><!--
+     -->
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        <li><a class="icon" aria-label="上一篇" href="/2024/04/18/AI%E7%AE%97%E6%B3%95/%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/"><i class="fa-solid fa-chevron-left" aria-hidden="true" onmouseover="$('#i-prev').toggle();" onmouseout="$('#i-prev').toggle();"></i></a></li>
+        
+        
+        <li><a class="icon" aria-label="返回顶部" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i></a></li>
+        <li><a class="icon" aria-label="分享文章" href="#"><i class="fa-solid fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i></a></li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">上一篇</span>
+      <span id="i-next" class="info" style="display:none;">下一篇</span>
+      <span id="i-top" class="info" style="display:none;">返回顶部</span>
+      <span id="i-share" class="info" style="display:none;">分享文章</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/"><i class="fab fa-facebook " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/&text=layernorm反向传播"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/&title=layernorm反向传播"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/&is_video=false&description=layernorm反向传播"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=layernorm反向传播&body=Check out this article: http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/"><i class="fa-solid fa-envelope " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/&title=layernorm反向传播"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/&title=layernorm反向传播"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/&title=layernorm反向传播"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/&title=layernorm反向传播"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/&name=layernorm反向传播&description="><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/&t=layernorm反向传播"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+    
+    
+      <div id="toc">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%89%8D%E5%90%91%E4%BC%A0%E6%92%AD"><span class="toc-number">1.</span> <span class="toc-text">前向传播</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD"><span class="toc-number">2.</span> <span class="toc-text">反向传播</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%8E%A8%E5%AF%BC%E8%BF%87%E7%A8%8B"><span class="toc-number">3.</span> <span class="toc-text">推导过程</span></a></li></ol>
+      </div>
+    
+  </span>
+</div>
+
+    
+    <div class="content index py4 ">
+        
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header>
+    
+    <h1 class="posttitle p-name" itemprop="name headline">
+        layernorm反向传播
+    </h1>
+
+
+
+    <div class="meta">
+      <span class="author p-author h-card" itemprop="author" itemscope itemtype="http://schema.org/Person">
+        <span class="p-name" itemprop="name">Li Qi</span>
+      </span>
+      
+    <div class="postdate">
+      
+        <time datetime="2024-04-17T16:00:00.000Z" class="dt-published" itemprop="datePublished">2024-04-18</time>
+        
+      
+    </div>
+
+
+      
+    <div class="article-category">
+        <i class="fa-solid fa-archive"></i>
+        <a class="category-link" href="/categories/%E6%89%8B%E6%89%93transformer/">手打transformer</a>
+    </div>
+
+
+      
+
+    </div>
+  </header>
+  
+
+  <div class="content e-content" itemprop="articleBody">
+    <h2 id="前向传播"><a href="#前向传播" class="headerlink" title="前向传播"></a>前向传播</h2><p>假设有一些向量的$m$维空间中，坐标点标准差会分别是$\mu(z)$和$\sigma(z)$，LayerNorm的参数是$w$和$b$，那么层归一化后的输出为：</p>
+<p>$$<br>y &#x3D; w \cdot \frac{z-\mu}{\sqrt{\sigma^2 + \epsilon}} + b<br>$$</p>
+<p>这里$\epsilon$是为了防止分母为$0$。去掉这一项：</p>
+<p>$$<br>y &#x3D; w \cdot \frac{z-\mu}{\sigma} + b<br>$$</p>
+<h2 id="反向传播"><a href="#反向传播" class="headerlink" title="反向传播"></a>反向传播</h2><p>假设损失函数$L$对输出$y$的偏导数是$\frac{\partial \mathcal{L}}{\partial y}$，那么这里需要三个梯度：$\frac{\partial \mathcal{L}}{\partial w}$, $\frac{\partial \mathcal{L}}{\partial b}$, $\frac{\partial \mathcal{L}}{\partial x}$</p>
+<p>令$\hat{x}&#x3D;\frac{x-\mu}{\sigma}$</p>
+<p>两个参数的梯度非常简单：</p>
+<p>$$\frac{\partial \mathcal{L}}{\partial w_{i}}  &#x3D;\frac{\partial \mathcal{L}}{\partial y_{i}} \cdot \frac{\partial y_{i}}{\partial w_{i}}&#x3D;\frac{\partial \mathcal{L}}{\partial y_{i}} \cdot \hat{x}_{i}$$</p>
+<p>$$\frac{\partial \mathcal{L}}{\partial b_{i}}  &#x3D;\frac{\partial \mathcal{L}}{\partial y_{i}} \cdot \frac{\partial y_{i}}{\partial b_{i}}&#x3D;\frac{\partial \mathcal{L}}{\partial y_{i}}$$</p>
+<p>对输入$x$的梯度等于：</p>
+<p>$$<br>\frac{\partial \mathcal{L}}{\partial x_i} &#x3D;&#x3D; \frac{1}{\sigma} \cdot \left[ \frac{\partial \mathcal{L}}{\partial y_i} \cdot w_i - \frac{1}{m} \cdot \left( \sum_j \frac{\partial \mathcal{L}}{\partial y_j} \cdot w_j  + \hat{x}_i \cdot  \sum_j \frac{\partial \mathcal{L}}{\partial y_j} \cdot w_j \cdot \hat{x}_j  \right)\right]<br>$$</p>
+<h2 id="推导过程"><a href="#推导过程" class="headerlink" title="推导过程"></a>推导过程</h2><p>对输入$x$的梯度可以写成：</p>
+<p>$$<br>\frac{\partial \mathcal{L}}{\partial x_i} &#x3D; \sum_j \frac{\partial \mathcal{L}}{\partial y_j} \cdot \frac{\partial y_j}{\partial x_i}<br>$$</p>
+<p>由于 $y &#x3D; \frac{x - \mu}{\sigma}$, 我们可以写出 $\frac{\partial y_j}{\partial x_i}$ 的表达式：</p>
+<p>$$<br>\frac{\partial y_j}{\partial x_i} &#x3D; \frac{\partial}{\partial x_i} \left( \frac{x_j - \mu}{\sigma} \right)<br>&#x3D; \frac{\partial}{\partial x_i} (x_j - \mu) \cdot \sigma^{-1} + (x_j - \mu) \cdot \frac{\partial}{\partial x_i} (-\sigma^{-2})<br>$$</p>
+<p>其中</p>
+<p>$$<br>\frac{\partial \mu}{\partial x_i} &#x3D; \frac{1}{m}<br>$$</p>
+<p>$$<br>\frac{\partial \sigma}{\partial x_i} &#x3D; \frac{1}{m} \cdot \sigma^{-1} \cdot (x_i - \mu)<br>$$</p>
+<p>代入可以得到：</p>
+<p>$$<br>\frac{\partial y_j}{\partial x_i} &#x3D; ( \delta_{ij} - \frac{\partial \mu}{\partial x_i} ) \cdot \sigma^{-1} - \sigma^{-2} \cdot (x_j - \mu) \cdot \frac{\partial \sigma}{\partial x_i}<br>$$</p>
+<p>$$<br>&#x3D; ( \delta_{ij} - \frac{1}{m} ) \cdot \sigma^{-1} - \sigma^{-2} \cdot (x_j - \mu) \cdot \frac{1}{m} \cdot \sigma^{-1} \cdot (x_i - \mu)<br>$$</p>
+<p>$$<br>&#x3D; \sigma^{-1} \cdot \delta_{ij} - \frac{1}{m} \cdot \sigma^{-1} - \frac{1}{m} \cdot \sigma^{-3} \cdot (x_i - \mu) \cdot (x_j - \mu)<br>$$</p>
+<p>$$<br>&#x3D; \sigma^{-1} \cdot \delta_{ij} - \frac{1}{m} \cdot \sigma^{-1} \cdot 1 - \frac{1}{m} \cdot \sigma^{-1} \cdot \hat{x}_i \cdot \hat{x}_j<br>$$</p>
+<p>最后可以得到：</p>
+<p>$$<br>\frac{\partial \mathcal{L}}{\partial x_i} &#x3D; \sum_j \frac{\partial \mathcal{L}}{\partial y_j} \cdot w_j \cdot \frac{\partial y_j}{\partial x_i}<br>$$</p>
+<p>$$<br>&#x3D; \sum_j \frac{\partial \mathcal{L}}{\partial y_j} \cdot w_j \cdot \left( \sigma^{-1} \cdot \delta_{ij} - \frac{1}{m} \cdot \sigma^{-1} - \frac{1}{m} \cdot \sigma^{-1} \cdot \hat{x}_i \cdot \hat{x}_j \right)<br>$$</p>
+<p>$$<br>&#x3D; \frac{1}{\sigma} \cdot \left[ \frac{\partial \mathcal{L}}{\partial y_i} \cdot w_i - \frac{1}{m} \cdot \sum_j \frac{\partial \mathcal{L}}{\partial y_j} \cdot w_j - \frac{\hat{x}_i}{m} \cdot \sum_j \frac{\partial \mathcal{L}}{\partial y_j} \cdot w_j \cdot \hat{x}_j \right]<br>$$</p>
+<p>$$<br>&#x3D; \frac{1}{\sigma} \cdot \left[ \frac{\partial \mathcal{L}}{\partial y_i} \cdot w_i - \frac{1}{m} \cdot \left( \sum_j \frac{\partial \mathcal{L}}{\partial y_j} \cdot w_j  + \hat{x}_i \cdot  \sum_j \frac{\partial \mathcal{L}}{\partial y_j} \cdot w_j \cdot \hat{x}_j  \right)\right]<br>$$</p>
+
+  </div>
+</article>
+
+
+
+        
+          <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+        
+          <li><a href="/">首页</a></li>
+        
+          <li><a href="/about/">关于</a></li>
+        
+          <li><a href="/archives/">归档</a></li>
+        
+          <li><a target="_blank" rel="noopener" href="http://github.com/probberechts">项目</a></li>
+        
+      </ul>
+    </div>
+
+    
+    
+      <div id="toc-footer" style="display: none">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%89%8D%E5%90%91%E4%BC%A0%E6%92%AD"><span class="toc-number">1.</span> <span class="toc-text">前向传播</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD"><span class="toc-number">2.</span> <span class="toc-text">反向传播</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%8E%A8%E5%AF%BC%E8%BF%87%E7%A8%8B"><span class="toc-number">3.</span> <span class="toc-text">推导过程</span></a></li></ol>
+      </div>
+    
+
+    <div id="share-footer" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/"><i class="fab fa-facebook fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/&text=layernorm反向传播"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/&title=layernorm反向传播"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/&is_video=false&description=layernorm反向传播"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=layernorm反向传播&body=Check out this article: http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/"><i class="fa-solid fa-envelope fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/&title=layernorm反向传播"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/&title=layernorm反向传播"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/&title=layernorm反向传播"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/&title=layernorm反向传播"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/&name=layernorm反向传播&description="><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=http://example.com/2024/04/18/%E6%89%8B%E6%89%93transformer/layernorm%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD/&t=layernorm反向传播"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i class="fa-solid fa-bars fa-lg" aria-hidden="true"></i> 菜单</a>
+        
+          <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;"><i class="fa-solid fa-list fa-lg" aria-hidden="true"></i> 目录</a>
+        
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fa-solid fa-share-alt fa-lg" aria-hidden="true"></i> 分享</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up fa-lg" aria-hidden="true"></i> 返回顶部</a>
+    </div>
+
+  </div>
+</div>
+
+        
+        <footer id="footer">
+  <div class="footer-left">
+    Copyright &copy;
+    
+    
+    2016-2024
+    Li Qi
+  </div>
+  <div class="footer-right">
+    <nav>
+      <ul>
+        <!--
+       --><li><a href="/">首页</a></li><!--
+     --><!--
+       --><li><a href="/about/">关于</a></li><!--
+     --><!--
+       --><li><a href="/archives/">归档</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="http://github.com/probberechts">项目</a></li><!--
+     -->
+      </ul>
+    </nav>
+  </div>
+</footer>
+
+    </div>
+    <!-- styles -->
+
+
+
+  <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" onload="this.onload=null;this.rel='stylesheet'"/>
+
+
+    <!-- jquery -->
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" crossorigin="anonymous"></script>
+
+
+
+
+<!-- clipboard -->
+
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.7/clipboard.min.js" crossorigin="anonymous"></script>
+  
+  <script type="text/javascript">
+  $(function() {
+    // copy-btn HTML
+    var btn = "<span class=\"btn-copy tooltipped tooltipped-sw\" aria-label=\"复制到粘贴板！\">";
+    btn += '<i class="fa-regular fa-clone"></i>';
+    btn += '</span>';
+    // mount it!
+    $(".highlight table").before(btn);
+    var clip = new ClipboardJS('.btn-copy', {
+      text: function(trigger) {
+        return Array.from(trigger.nextElementSibling.querySelectorAll('.code')).reduce((str,it)=>str+it.innerText+'\n','')
+      }
+    });
+    clip.on('success', function(e) {
+      e.trigger.setAttribute('aria-label', "复制成功！");
+      e.clearSelection();
+    })
+  })
+  </script>
+
+
+<script src="/js/main.js"></script>
+
+<!-- search -->
+
+<!-- Baidu Analytics -->
+
+<!-- Cloudflare Analytics -->
+
+<!-- Disqus Comments -->
+
+<!-- utterances Comments -->
+
+</body>
+</html>
